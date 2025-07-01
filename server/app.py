@@ -17,7 +17,7 @@ from grafana_utils import (
     parse_panel_url,
     query_grafana_panel,
 )
-from html_utils import CHART_TYPE_MAP, generate_html
+from html_utils import generate_html
 
 app = Flask(__name__)
 
@@ -122,13 +122,9 @@ def handle_general_exception(error):
     return jsonify({"error": error_msg, "traceback": stack_trace}), 500
 
 
-@app.route("/render", methods=["POST"])
-def render_chart():
-    data = request.get_json()
-    logger.info(f"Render request data: {data}")
+def _get_panel_data(data):
     token = data["grafana_token"]
     panel_url = data["panel_url"]
-    full_html = data.get("full_html", False)
 
     # Get time range from request body, with defaults
     fr = data.get("from", "now-6h")
@@ -159,7 +155,7 @@ def render_chart():
         raise NoTargetsException()
 
     panel_type = panel.get("type", "timeseries").lower()
-    chartkick_type = CHART_TYPE_MAP.get(panel_type, "LineChart")
+
     original_panel_type = panel_type
 
     # Apply template variables to targets
@@ -173,16 +169,35 @@ def render_chart():
     except Exception as e:
         raise GrafanaQueryException(f"Error querying Grafana panel: {str(e)}")
 
-    # Use detected chart type if available
-    if detected_chart_type:
-        chartkick_type = detected_chart_type
+    return {
+        "panel_type": panel_type,
+        "panel_title": panel.get("title", "Grafana Panel"),
+        "detected_chart_type": detected_chart_type,
+        "data_series": data_series,
+        "raw_response": response_data,
+        "processed_targets": processed_targets,
+        "variables": variables,
+    }
+
+
+@app.route("/render", methods=["POST"])
+def render_chart():
+    data = request.get_json()
+    full_html = data.get("full_html", False)
+
+    panel_data = _get_panel_data(data)
+
+    detected_chart_type = panel_data["detected_chart_type"]
+    data_series = panel_data["data_series"]
+    panel_type = panel_data["panel_type"]
+    panel_title = panel_data["panel_title"]
 
     # Generate HTML
     html = generate_html(
-        chartkick_type,
+        detected_chart_type,
         data_series,
-        title=panel.get("title", "Grafana Panel"),
-        original_panel_type=original_panel_type,
+        title=panel_title,
+        original_panel_type=panel_type,
         full_html=full_html,
     )
     if full_html:
@@ -200,63 +215,11 @@ def query_panel():
     without HTML rendering
     """
     data = request.get_json()
-    token = data["grafana_token"]
-    panel_url = data["panel_url"]
 
-    # Get time range from request body, with defaults
-    fr = data.get("from", "now-6h")
-    to = data.get("to", "now")
-
-    # Parse URL and extract variables
-    host, uid, panel_id, variables = parse_panel_url(panel_url)
-
-    if not uid or not panel_id:
-        raise InvalidPanelUrlException()
-
-    # Fetch dashboard metadata
-    try:
-        dashboard = get_dashboard_metadata(host, uid, token)
-    except Exception as e:
-        raise DashboardMetadataException(f"Error fetching dashboard metadata: {str(e)}")
-
-    panel = next(
-        (p for p in dashboard["dashboard"]["panels"] if str(p["id"]) == panel_id),
-        None,
-    )
-
-    if not panel:
-        raise PanelNotFoundException()
-
-    targets = panel.get("targets", [])
-    if not targets:
-        raise NoTargetsException()
-
-    panel_type = panel.get("type", "timeseries").lower()
-    original_panel_type = panel_type
-
-    # Apply template variables to targets
-    processed_targets = apply_template_variables(targets, variables)
-
-    # Query Grafana and process response
-    try:
-        response_data, data_series, detected_chart_type = query_grafana_panel(
-            host, token, processed_targets, fr, to, original_panel_type
-        )
-    except Exception as e:
-        raise GrafanaQueryException(f"Error querying Grafana panel: {str(e)}")
+    panel_data = _get_panel_data(data)
 
     # Return structured data
-    return jsonify(
-        {
-            "panel_type": panel_type,
-            "panel_title": panel.get("title", "Grafana Panel"),
-            "detected_chart_type": detected_chart_type,
-            "data_series": data_series,
-            "raw_response": response_data,
-            "processed_targets": processed_targets,
-            "variables": variables,
-        }
-    )
+    return jsonify(panel_data)
 
 
 if __name__ == "__main__":
