@@ -9,83 +9,9 @@ CHART_TYPE_MAP = {
 }
 
 
-def generate_html(
-    chart_type,
-    data_series,
-    title="Grafana Panel",
-    original_panel_type=None,
-    full_html=False,
-):
-    """Generate HTML with appropriate chart visualization based on data type"""
-    # Check if this is a single stat value
-    is_stat = isinstance(data_series, dict) and "stat_value" in data_series
-    is_gauge = is_stat and (
-        original_panel_type == "gauge"
-        if original_panel_type
-        else chart_type in ["gauge", "Gauge"]
-    )
-
-    # Determine if we have multiple series (only for non-stat data)
-    is_multi_series = (
-        not is_stat and isinstance(data_series, dict) and len(data_series) > 1
-    )
-
-    if is_stat:
-        # For stat/gauge panels, create a simple data structure
-        stat_value = data_series["stat_value"]
-        formatted_value = (
-            f"{stat_value:,}"
-            if isinstance(stat_value, (int, float))
-            else str(stat_value)
-        )
-
-        if is_gauge:
-            # For gauge, we need the numeric value for the gauge chart
-            chart_data = {
-                "value": float(stat_value)
-                if isinstance(stat_value, (int, float))
-                else 0
-            }
-        else:
-            # For regular stat, we need both raw and formatted
-            chart_data = {"value": stat_value, "formatted": formatted_value}
-    elif is_multi_series:
-        # Multi-series configuration with TRMNL background classes
-        series_config = []
-        colors = ["#000000", "#666666", "#999999", "#CCCCCC"]
-        # Use TRMNL background patterns instead of PNG URLs
-        bg_patterns = [
-            None,  # First series uses solid color
-            "bg--gray-5",
-            "bg--gray-3",
-            "bg--gray-1",
-        ]
-
-        for i, (series_name, series_data) in enumerate(data_series.items()):
-            color_config = colors[i % len(colors)]
-            bg_pattern = bg_patterns[i % len(bg_patterns)]
-
-            # For series with patterns, we'll handle this in the chart configuration
-            series_config.append(
-                {
-                    "name": series_name,
-                    "data": series_data,
-                    "lineWidth": 4 if i == 0 else 3,
-                    "color": color_config,
-                    "zIndex": len(data_series) - i,
-                    "bgPattern": bg_pattern,  # Store pattern class for later use
-                }
-            )
-
-        chart_data = series_config
-    else:
-        # Single series - use original format
-        if isinstance(data_series, dict):
-            chart_data = list(data_series.values())[0]
-        else:
-            chart_data = data_series
-
-    base_html = f"""
+def generate_base_html_template(title, chart_content):
+    """Generate base HTML template with TRMNL structure"""
+    return f"""
       <script src="https://code.highcharts.com/highcharts.js"></script>
       <script src="https://code.highcharts.com/highcharts-more.js"></script>
       <script src="https://code.highcharts.com/modules/pattern-fill.js"></script>
@@ -96,108 +22,120 @@ def generate_html(
           <div id="chart" class="w--full h--64"></div>
         </div>
         <div class="title_bar">
-          <img class="image" src="/images/plugins/trmnl--render.svg" />
+          <img class="image" src="https://grafana.com/static/img/menu/grafana2.svg"
+                    style="width: 28px; height: 28px;" />
           <span class="title">{title}</span>
         </div>
       </div>
 
       <script>
+        {chart_content}
+      </script>
+    """
+
+
+def generate_stat_chart(chart_data):
+    """Generate stat chart configuration"""
+    return f"""
         var chartData = {chart_data};
 
-        {
-        '''
         // Stat panel configuration using Highcharts
-        Highcharts.chart("chart", {
-          chart: {
+        Highcharts.chart("chart", {{
+          chart: {{
             type: "line",
             animation: false,
             backgroundColor: "transparent"
-          },
-          title: {
+          }},
+          title: {{
             text: null
-          },
-          xAxis: {
+          }},
+          xAxis: {{
             visible: false
-          },
-          yAxis: {
+          }},
+          yAxis: {{
             visible: false
-          },
-          legend: {
+          }},
+          legend: {{
             enabled: false
-          },
-          plotOptions: {
-            series: {
+          }},
+          plotOptions: {{
+            series: {{
               animation: false,
               enableMouseTracking: false,
-              states: {
-                hover: {
+              states: {{
+                hover: {{
                   enabled: false
-                }
-              }
-            }
-          },
-          series: [{
+                }}
+              }}
+            }}
+          }},
+          series: [{{
             data: [0],
             showInLegend: false,
-            marker: {
+            marker: {{
               enabled: false
-            },
+            }},
             lineWidth: 0,
-            dataLabels: {
+            dataLabels: {{
               enabled: true,
-              formatter: function() {
+              formatter: function() {{
                 return chartData.formatted;
-              },
-              style: {
+              }},
+              style: {{
                 fontSize: "120px",
                 fontWeight: "bold",
                 color: "#000000",
                 textOutline: "none"
-              },
+              }},
               x: 0,
               y: 0,
               verticalAlign: "middle",
               align: "center"
-            }
-          }],
-          credits: {
+            }}
+          }}],
+          credits: {{
             enabled: false
-          }
-        });
-        '''
-        if is_stat and not is_gauge
-        else '''
+          }}
+        }});
+    """
+
+
+def generate_gauge_chart(chart_data):
+    """Generate gauge chart configuration"""
+    return f"""
+        var chartData = {chart_data};
+
         // Gauge chart configuration
-        Highcharts.chart("chart", {
-          chart: {
+        Highcharts.chart("chart", {{
+          chart: {{
             type: "gauge",
             animation: false,
             spacing: [10, 10, 5, 10]
-          },
-          title: {
+          }},
+          title: {{
             text: null
-          },
-          pane: {
+          }},
+          pane: {{
             startAngle: -150,
             endAngle: 150,
-            background: {
+            background: {{
               backgroundColor: "transparent",
               borderWidth: 0
-            }
-          },
-          plotOptions: {
-            gauge: {
+            }}
+          }},
+          plotOptions: {{
+            gauge: {{
               animation: false,
-              pivot: {
+              pivot: {{
                 backgroundColor: "transparent"
-              },
-              dial: {
+              }},
+              dial: {{
                 backgroundColor: "transparent",
                 baseWidth: 0
-              }
-            }
-          },
-          yAxis: {
+              }}
+            }}
+          }},
+          yAxis: {{
             min: 0,
             max: 100,
             minorTickInterval: 0,
@@ -206,50 +144,55 @@ def generate_html(
             tickPixelInterval: 40,
             tickWidth: 2,
             lineWidth: 0,
-            title: {
+            title: {{
               text: null
-            },
-            labels: {
+            }},
+            labels: {{
               distance: 15,
-              style: {
+              style: {{
                 fontSize: "16px",
                 color: "#000000"
-              }
-            },
-            plotBands: [{
+              }}
+            }},
+            plotBands: [{{
               from: 1,
               to: chartData.value,
               color: "#666666",  // Use gray color instead of pattern for gauge fill
               innerRadius: "82%",
               borderRadius: "50%"
-            }, {
+            }}, {{
               from: chartData.value + 1,
               to: 100,
               color: "#CCCCCC",  // Light gray for remaining portion
               innerRadius: "82%",
               borderRadius: "50%"
-            }]
-          },
-          series: [{
+            }}]
+          }},
+          series: [{{
             name: "Value",
             data: [chartData.value],
-            dataLabels: {
-              format: "{point.y:.2f}",
+            dataLabels: {{
+              format: "{{point.y:.2f}}",
               borderWidth: 0,
-              style: {
+              style: {{
                 fontSize: "2em",
                 fontWeight: "400",
                 color: "#000000"
-              }
-            }
-          }],
-          credits: {
+              }}
+            }}
+          }}],
+          credits: {{
             enabled: false
-          }
-        });
-        '''
-        if is_gauge
-        else f'''
+          }}
+        }});
+    """
+
+
+def generate_multi_series_chart(chart_data, chart_type):
+    """Generate multi-series chart configuration"""
+    return f"""
+        var chartData = {chart_data};
+
         // Multi-series Highcharts configuration
         Highcharts.chart("chart", {{
           chart: {{
@@ -312,9 +255,14 @@ def generate_html(
             enabled: false
           }}
         }});
-        '''
-        if is_multi_series
-        else f'''
+    """
+
+
+def generate_single_series_chart(chart_data, chart_type):
+    """Generate single series chart configuration"""
+    return f"""
+        var chartData = {chart_data};
+
         // Single series Chartkick configuration
         var createChart = function() {{
           new Chartkick.{chart_type}("chart", chartData, {{
@@ -370,12 +318,91 @@ def generate_html(
         }} else {{
           window.addEventListener("chartkick:load", createChart, true);
         }}
-        '''
-    }
-      </script>
     """
 
+
+def generate_html(
+    chart_type,
+    data_series,
+    title="Grafana Panel",
+    original_panel_type=None,
+    full_html=False,
+):
+    """Generate HTML with appropriate chart visualization based on data type"""
+    # Check if this is a single stat value
+    is_stat = isinstance(data_series, dict) and "stat_value" in data_series
+    is_gauge = is_stat and (
+        original_panel_type == "gauge"
+        if original_panel_type
+        else chart_type in ["gauge", "Gauge"]
+    )
+
+    # Determine if we have multiple series (only for non-stat data)
+    is_multi_series = (
+        not is_stat and isinstance(data_series, dict) and len(data_series) > 1
+    )
+
+    # Prepare chart data based on type
+    if is_stat:
+        stat_value = data_series["stat_value"]
+        formatted_value = (
+            f"{stat_value:,}"
+            if isinstance(stat_value, (int, float))
+            else str(stat_value)
+        )
+
+        if is_gauge:
+            chart_data = {
+                "value": float(stat_value)
+                if isinstance(stat_value, (int, float))
+                else 0
+            }
+        else:
+            chart_data = {"value": stat_value, "formatted": formatted_value}
+    elif is_multi_series:
+        # Multi-series configuration with TRMNL background classes
+        series_config = []
+        colors = ["#000000", "#666666", "#999999", "#CCCCCC"]
+
+        for i, (series_name, series_data) in enumerate(data_series.items()):
+            color_config = colors[i % len(colors)]
+
+            series_config.append(
+                {
+                    "name": series_name,
+                    "data": series_data,
+                    "lineWidth": 4 if i == 0 else 3,
+                    "color": color_config,
+                    "zIndex": len(data_series) - i,
+                }
+            )
+
+        chart_data = series_config
+    else:
+        # Single series - use original format
+        if isinstance(data_series, dict):
+            chart_data = list(data_series.values())[0]
+        else:
+            chart_data = data_series
+
+    # Generate appropriate chart content
+    if is_stat and not is_gauge:
+        chart_content = generate_stat_chart(chart_data)
+    elif is_gauge:
+        chart_content = generate_gauge_chart(chart_data)
+    elif is_multi_series:
+        chart_content = generate_multi_series_chart(chart_data, chart_type)
+    else:
+        chart_content = generate_single_series_chart(chart_data, chart_type)
+
+    # Generate base HTML
+    base_html = generate_base_html_template(title, chart_content)
+
     if full_html:
+        google_fonts_url = (
+            "https://fonts.googleapis.com/css2?"
+            "family=Inter:wght@300;350;375;400;450;600;700&display=swap"
+        )
         return f"""
     <!DOCTYPE html>
     <html>
@@ -385,7 +412,7 @@ def generate_html(
       <script src="https://usetrmnl.com/js/latest/plugins.js"></script>
       <link rel="preconnect" href="https://fonts.googleapis.com">
       <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;350;375;400;450;600;700&display=swap" rel="stylesheet">
+      <link href="{google_fonts_url}" rel="stylesheet">
     </head>
     <body class="environment trmnl">
     <div class="screen">
