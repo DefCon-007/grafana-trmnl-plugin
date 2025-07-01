@@ -3,6 +3,17 @@ from urllib.parse import parse_qs, urlparse
 
 import requests
 
+# Chart type mapping for proper chart type detection
+CHART_TYPE_MAP = {
+    "timeseries": "LineChart",
+    "graph": "LineChart",
+    "stat": "ColumnChart",
+    "gauge": "ColumnChart",
+    "bar gauge": "BarChart",
+    "table": "ColumnChart",
+    "piechart": "PieChart",
+}
+
 
 def parse_panel_url(panel_url):
     """Parse Grafana panel URL to extract host, UID, panel ID, and variables"""
@@ -174,7 +185,8 @@ def query_grafana_panel(host, token, processed_targets, fr, to, original_panel_t
 
     # Process the response data
     data_series = {}
-    chartkick_type = "LineChart"  # Default
+    # Use original panel type to determine correct chart type instead of defaulting to LineChart
+    chartkick_type = CHART_TYPE_MAP.get(original_panel_type, "LineChart")
 
     if "results" in response_data:
         # Process all series in the response
@@ -187,9 +199,15 @@ def query_grafana_panel(host, token, processed_targets, fr, to, original_panel_t
 
                         # Check if this is a single value stat (like COUNT(*))
                         if len(values) == 1 and len(values[0]) == 1:
-                            # Single stat value - but preserve original type for gauge detection
-                            if original_panel_type != "gauge":
-                                chartkick_type = "stat"
+                            # Single stat value - preserve original type for gauge detection
+                            if original_panel_type == "gauge":
+                                chartkick_type = (
+                                    "gauge"  # Keep as gauge for special handling
+                                )
+                            else:
+                                chartkick_type = (
+                                    "stat"  # Mark as stat for special handling
+                                )
                             stat_value = values[0][0]
                             data_series["stat_value"] = stat_value
                         elif len(values) >= 2:

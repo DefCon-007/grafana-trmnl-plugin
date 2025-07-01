@@ -1,4 +1,8 @@
-from flask import Flask, jsonify, request
+import logging
+import traceback
+from datetime import datetime
+
+from flask import Flask, jsonify, make_response, request
 from grafana_utils import (
     apply_template_variables,
     get_dashboard_metadata,
@@ -9,11 +13,18 @@ from html_utils import CHART_TYPE_MAP, generate_html
 
 app = Flask(__name__)
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
+
 
 @app.route("/render", methods=["POST"])
 def render_chart():
     try:
         data = request.get_json()
+        logger.info(f"Render request data: {data}")
         token = data["grafana_token"]
         panel_url = data["panel_url"]
         full_html = data.get("full_html", False)
@@ -67,12 +78,23 @@ def render_chart():
             original_panel_type=original_panel_type,
             full_html=full_html,
         )
-        return html
+        if full_html:
+            response = make_response(html)
+            response.headers["Content-Type"] = "text/html; charset=utf-8"
+            return response
+        else:
+            return {"html": html, "generated_at": datetime.now().isoformat()}
 
     except Exception as e:
-        import traceback
+        error_msg = str(e)
+        stack_trace = traceback.format_exc()
 
-        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+        # Log error details to console
+        logger.error(f"Error in /render endpoint: {error_msg}")
+        logger.error(f"Request data: {request.get_json()}")
+        logger.error(f"Stack trace:\n{stack_trace}")
+
+        return jsonify({"error": error_msg, "traceback": stack_trace}), 500
 
 
 @app.route("/query", methods=["POST"])
@@ -136,9 +158,15 @@ def query_panel():
         )
 
     except Exception as e:
-        import traceback
+        error_msg = str(e)
+        stack_trace = traceback.format_exc()
 
-        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+        # Log error details to console
+        logger.error(f"Error in /query endpoint: {error_msg}")
+        logger.error(f"Request data: {request.get_json()}")
+        logger.error(f"Stack trace:\n{stack_trace}")
+
+        return jsonify({"error": error_msg, "traceback": stack_trace}), 500
 
 
 if __name__ == "__main__":
