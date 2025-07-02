@@ -30,8 +30,8 @@ jobs:
       uses: google-github-actions/deploy-appengine@v2
       with:
         working_directory: server
-        deliverables: app.yaml dispatch.yaml
+        deliverables: app.yaml
         project_id: ${{ vars.GCP_PROJECT }}
 
     - name: Test
-      run: curl "${{ steps.deploy.outputs.url }}"
+      run: curl "${{ steps.deploy.outputs.version_url }}"

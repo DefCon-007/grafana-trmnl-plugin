@@ -1,5 +1,5 @@
 runtime: python311
-service: grafana-trmnl-plugin-server
+service: default
 handlers:
   - url: /.*
     script: auto
