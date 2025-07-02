@@ -118,15 +118,13 @@ def _get_panel_data(data):
 
     panel_type = panel.get("type", "timeseries").lower()
 
-    original_panel_type = panel_type
-
     # Apply template variables to targets
     processed_targets = apply_template_variables(targets, variables)
 
     # Query Grafana and process response
     try:
-        response_data, data_series, detected_chart_type = query_grafana_panel(
-            host, token, processed_targets, fr, to, original_panel_type
+        response_data, data_series = query_grafana_panel(
+            host, token, processed_targets, fr, to, panel_type
         )
     except Exception as e:
         raise GrafanaQueryException(f"Error querying Grafana panel: {str(e)}")
@@ -134,7 +132,6 @@ def _get_panel_data(data):
     return {
         "panel_type": panel_type,
         "panel_title": panel.get("title", "Grafana Panel"),
-        "detected_chart_type": detected_chart_type,
         "data_series": data_series,
         "raw_response": response_data,
         "processed_targets": processed_targets,
@@ -157,17 +154,15 @@ def render_chart():
 
     panel_data = _get_panel_data(data)
 
-    detected_chart_type = panel_data["detected_chart_type"]
     data_series = panel_data["data_series"]
     panel_type = panel_data["panel_type"]
     panel_title = panel_data["panel_title"]
 
     # Generate HTML
     html = generate_html(
-        detected_chart_type,
         data_series,
+        panel_type,
         title=panel_title,
-        original_panel_type=panel_type,
         full_html=full_html,
     )
     if full_html:

@@ -1,0 +1,36 @@
+{
+    "panel_type": "bar gauge",
+    "panel_title": "Server Response Times",
+    "data_series": {
+        "Response Times": [
+            ["Server A", 120],
+            ["Server B", 85],
+            ["Server C", 95],
+            ["Server D", 140]
+        ]
+    },
+    "raw_response": {
+        "results": {
+            "A": {
+                "frames": [
+                    {
+                        "data": {
+                            "values": [
+                                ["Server A", "Server B", "Server C", "Server D"],
+                                [120, 85, 95, 140]
+                            ]
+                        }
+                    }
+                ]
+            }
+        }
+    },
+    "processed_targets": [
+        {
+            "refId": "A",
+            "expr": "http_request_duration_seconds",
+            "format": "table"
+        }
+    ],
+    "variables": {}
+}

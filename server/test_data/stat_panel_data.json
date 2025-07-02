@@ -1,0 +1,28 @@
+{
+    "panel_type": "stat",
+    "panel_title": "Total Users",
+    "data_series": {
+        "stat_value": 1234
+    },
+    "raw_response": {
+        "results": {
+            "A": {
+                "frames": [
+                    {
+                        "data": {
+                            "values": [[1234]]
+                        }
+                    }
+                ]
+            }
+        }
+    },
+    "processed_targets": [
+        {
+            "refId": "A",
+            "expr": "count(users)",
+            "format": "table"
+        }
+    ],
+    "variables": {}
+}

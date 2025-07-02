@@ -1,14 +1,3 @@
-CHART_TYPE_MAP = {
-    "timeseries": "LineChart",
-    "graph": "LineChart",
-    "stat": "ColumnChart",
-    "gauge": "ColumnChart",
-    "bar gauge": "BarChart",
-    "table": "ColumnChart",
-    "piechart": "PieChart",
-}
-
-
 def get_full_html(title, content):
     return f"""
 <!DOCTYPE html>
@@ -84,9 +73,16 @@ def generate_base_html_template(title, chart_content):
     """
 
 
-def generate_stat_chart(chart_data):
-    """Generate stat chart configuration"""
-    return f"""
+def generate_stat_html(data_series, title="Grafana Panel"):
+    """Generate HTML for stat panel"""
+    stat_value = data_series["stat_value"]
+    formatted_value = (
+        f"{stat_value:,}" if isinstance(stat_value, (int, float)) else str(stat_value)
+    )
+
+    chart_data = {"value": stat_value, "formatted": formatted_value}
+
+    chart_content = f"""
         var chartData = {chart_data};
 
         // Stat panel configuration using Highcharts
@@ -149,10 +145,17 @@ def generate_stat_chart(chart_data):
         }});
     """
 
+    return generate_base_html_template(title, chart_content)
 
-def generate_gauge_chart(chart_data):
-    """Generate gauge chart configuration"""
-    return f"""
+
+def generate_gauge_html(data_series, title="Grafana Panel"):
+    """Generate HTML for gauge panel"""
+    stat_value = data_series["stat_value"]
+    chart_data = {
+        "value": float(stat_value) if isinstance(stat_value, (int, float)) else 0
+    }
+
+    chart_content = f"""
         var chartData = {chart_data};
 
         // Gauge chart configuration
@@ -237,180 +240,20 @@ def generate_gauge_chart(chart_data):
         }});
     """
 
-
-def generate_multi_series_chart(chart_data, chart_type):
-    """Generate multi-series chart configuration"""
-    return f"""
-        var chartData = {chart_data};
-
-        // Multi-series Highcharts configuration
-        Highcharts.chart("chart", {{
-          chart: {{
-            type: "{"line" if chart_type == "LineChart" else "column"}",
-            animation: false,
-            spacing: [10, 10, 5, 10]
-          }},
-          title: {{
-            text: null
-          }},
-          plotOptions: {{
-            series: {{
-              animation: false,
-              enableMouseTracking: true,
-              marker: {{
-                enabled: false
-              }}
-            }}
-          }},
-          series: chartData,
-          tooltip: {{
-            enabled: true,
-            shared: true
-          }},
-          legend: {{
-            enabled: true,
-            align: "left",
-            verticalAlign: "top",
-            layout: "horizontal"
-          }},
-          yAxis: {{
-            labels: {{
-              style: {{ fontSize: "16px", color: "#000000" }}
-            }},
-            gridLineDashStyle: "shortdot",
-            gridLineWidth: 1,
-            gridLineColor: "#000000",
-            tickAmount: 6,
-            title: {{
-              text: null
-            }}
-          }},
-          xAxis: {{
-            type: "datetime",
-            labels: {{
-              style: {{ fontSize: "16px", color: "#000000" }}
-            }},
-            lineWidth: 0,
-            gridLineDashStyle: "dot",
-            tickWidth: 1,
-            tickLength: 0,
-            gridLineWidth: 1,
-            gridLineColor: "#000000",
-            tickPixelInterval: 120,
-            title: {{
-              text: null
-            }}
-          }},
-          credits: {{
-            enabled: false
-          }}
-        }});
-    """
+    return generate_base_html_template(title, chart_content)
 
 
-def generate_single_series_chart(chart_data, chart_type):
-    """Generate single series chart configuration"""
-    return f"""
-        var chartData = {chart_data};
-
-        // Single series Chartkick configuration
-        var createChart = function() {{
-          new Chartkick.{chart_type}("chart", chartData, {{
-            adapter: "highcharts",
-            curve: true,
-            colors: ["#000000"],
-            points: false,
-            library: {{
-              chart: {{
-                animation: false
-              }},
-              plotOptions: {{
-                series: {{
-                  animation: false,
-                  lineWidth: 4
-                }}
-              }},
-              yAxis: {{
-                labels: {{
-                  style: {{
-                    fontSize: "16px",
-                    color: "#000000"
-                  }}
-                }},
-                gridLineDashStyle: "shortdot",
-                gridLineWidth: 1,
-                gridLineColor: "#000000",
-                tickAmount: 5
-              }},
-              xAxis: {{
-                type: "datetime",
-                labels: {{
-                  style: {{
-                    fontSize: "16px",
-                    color: "#000000"
-                  }}
-                }},
-                lineWidth: 0,
-                gridLineDashStyle: "dot",
-                tickWidth: 1,
-                tickLength: 0,
-                gridLineWidth: 1,
-                gridLineColor: "#000000",
-                tickPixelInterval: 120
-              }}
-            }}
-          }});
-        }};
-
-        // Ensure chart loads properly
-        if ("Chartkick" in window) {{
-          createChart();
-        }} else {{
-          window.addEventListener("chartkick:load", createChart, true);
-        }}
-    """
-
-
-def generate_html(
-    chart_type,
-    data_series,
-    title="Grafana Panel",
-    original_panel_type=None,
-    full_html=False,
-):
-    """Generate HTML with appropriate chart visualization based on data type"""
-    # Check if this is a single stat value
-    is_stat = isinstance(data_series, dict) and "stat_value" in data_series
-    is_gauge = is_stat and (
-        original_panel_type == "gauge"
-        if original_panel_type
-        else chart_type in ["gauge", "Gauge"]
-    )
-
-    # Determine if we have multiple series (only for non-stat data)
+def generate_timeseries_html(data_series, title="Grafana Panel"):
+    """Generate HTML for timeseries panels"""
+    # Check if we have multiple series
     is_multi_series = (
-        not is_stat and isinstance(data_series, dict) and len(data_series) > 1
+        isinstance(data_series, dict)
+        and len(data_series) > 1
+        and "stat_value" not in data_series
     )
 
-    # Prepare chart data based on type
-    if is_stat:
-        stat_value = data_series["stat_value"]
-        formatted_value = (
-            f"{stat_value:,}"
-            if isinstance(stat_value, (int, float))
-            else str(stat_value)
-        )
-
-        if is_gauge:
-            chart_data = {
-                "value": float(stat_value)
-                if isinstance(stat_value, (int, float))
-                else 0
-            }
-        else:
-            chart_data = {"value": stat_value, "formatted": formatted_value}
-    elif is_multi_series:
-        # Multi-series configuration with TRMNL background classes
+    if is_multi_series:
+        # Multi-series configuration
         series_config = []
         colors = ["#000000", "#666666", "#999999", "#CCCCCC"]
 
@@ -428,25 +271,334 @@ def generate_html(
             )
 
         chart_data = series_config
+
+        chart_content = f"""
+            var chartData = {chart_data};
+
+            // Multi-series Highcharts configuration
+            Highcharts.chart("chart", {{
+              chart: {{
+                type: "line",
+                animation: false,
+                spacing: [10, 10, 5, 10]
+              }},
+              title: {{
+                text: null
+              }},
+              plotOptions: {{
+                series: {{
+                  animation: false,
+                  enableMouseTracking: true,
+                  marker: {{
+                    enabled: false
+                  }}
+                }}
+              }},
+              series: chartData,
+              tooltip: {{
+                enabled: true,
+                shared: true
+              }},
+              legend: {{
+                enabled: true,
+                align: "left",
+                verticalAlign: "top",
+                layout: "horizontal"
+              }},
+              yAxis: {{
+                labels: {{
+                  style: {{ fontSize: "16px", color: "#000000" }}
+                }},
+                gridLineDashStyle: "shortdot",
+                gridLineWidth: 1,
+                gridLineColor: "#000000",
+                tickAmount: 6,
+                title: {{
+                  text: null
+                }}
+              }},
+              xAxis: {{
+                type: "datetime",
+                labels: {{
+                  style: {{ fontSize: "16px", color: "#000000" }}
+                }},
+                lineWidth: 0,
+                gridLineDashStyle: "dot",
+                tickWidth: 1,
+                tickLength: 0,
+                gridLineWidth: 1,
+                gridLineColor: "#000000",
+                tickPixelInterval: 120,
+                title: {{
+                  text: null
+                }}
+              }},
+              credits: {{
+                enabled: false
+              }}
+            }});
+        """
     else:
-        # Single series - use original format
+        # Single series using Chartkick
         if isinstance(data_series, dict):
             chart_data = list(data_series.values())[0]
         else:
             chart_data = data_series
 
-    # Generate appropriate chart content
-    if is_stat and not is_gauge:
-        chart_content = generate_stat_chart(chart_data)
-    elif is_gauge:
-        chart_content = generate_gauge_chart(chart_data)
-    elif is_multi_series:
-        chart_content = generate_multi_series_chart(chart_data, chart_type)
-    else:
-        chart_content = generate_single_series_chart(chart_data, chart_type)
+        chart_content = f"""
+            var chartData = {chart_data};
 
-    # Generate base HTML
-    base_html = generate_base_html_template(title, chart_content)
+            // Single series Chartkick configuration
+            var createChart = function() {{
+              new Chartkick.LineChart("chart", chartData, {{
+                adapter: "highcharts",
+                curve: true,
+                colors: ["#000000"],
+                points: false,
+                library: {{
+                  chart: {{
+                    animation: false
+                  }},
+                  plotOptions: {{
+                    series: {{
+                      animation: false,
+                      lineWidth: 4
+                    }}
+                  }},
+                  yAxis: {{
+                    labels: {{
+                      style: {{
+                        fontSize: "16px",
+                        color: "#000000"
+                      }}
+                    }},
+                    gridLineDashStyle: "shortdot",
+                    gridLineWidth: 1,
+                    gridLineColor: "#000000",
+                    tickAmount: 5
+                  }},
+                  xAxis: {{
+                    type: "datetime",
+                    labels: {{
+                      style: {{
+                        fontSize: "16px",
+                        color: "#000000"
+                      }}
+                    }},
+                    lineWidth: 0,
+                    gridLineDashStyle: "dot",
+                    tickWidth: 1,
+                    tickLength: 0,
+                    gridLineWidth: 1,
+                    gridLineColor: "#000000",
+                    tickPixelInterval: 120
+                  }}
+                }}
+              }});
+            }};
+
+            // Ensure chart loads properly
+            if ("Chartkick" in window) {{
+              createChart();
+            }} else {{
+              window.addEventListener("chartkick:load", createChart, true);
+            }}
+        """
+
+    return generate_base_html_template(title, chart_content)
+
+
+def generate_bar_gauge_html(data_series, title="Grafana Panel"):
+    """Generate HTML for bar gauge panels"""
+    if isinstance(data_series, dict):
+        chart_data = list(data_series.values())[0]
+    else:
+        chart_data = data_series
+
+    chart_content = f"""
+        var chartData = {chart_data};
+
+        // Bar chart Chartkick configuration
+        var createChart = function() {{
+          new Chartkick.BarChart("chart", chartData, {{
+            adapter: "highcharts",
+            colors: ["#000000"],
+            library: {{
+              chart: {{
+                animation: false
+              }},
+              plotOptions: {{
+                series: {{
+                  animation: false
+                }}
+              }},
+              yAxis: {{
+                labels: {{
+                  style: {{
+                    fontSize: "16px",
+                    color: "#000000"
+                  }}
+                }},
+                gridLineDashStyle: "shortdot",
+                gridLineWidth: 1,
+                gridLineColor: "#000000",
+                tickAmount: 5
+              }},
+              xAxis: {{
+                labels: {{
+                  style: {{
+                    fontSize: "16px",
+                    color: "#000000"
+                  }}
+                }},
+                lineWidth: 0,
+                gridLineDashStyle: "dot",
+                tickWidth: 1,
+                tickLength: 0,
+                gridLineWidth: 1,
+                gridLineColor: "#000000"
+              }}
+            }}
+          }});
+        }};
+
+        // Ensure chart loads properly
+        if ("Chartkick" in window) {{
+          createChart();
+        }} else {{
+          window.addEventListener("chartkick:load", createChart, true);
+        }}
+    """
+
+    return generate_base_html_template(title, chart_content)
+
+
+def generate_piechart_html(data_series, title="Grafana Panel"):
+    """Generate HTML for pie chart panels"""
+    if isinstance(data_series, dict):
+        chart_data = list(data_series.values())[0]
+    else:
+        chart_data = data_series
+
+    chart_content = f"""
+        var chartData = {chart_data};
+
+        // Pie chart Chartkick configuration
+        var createChart = function() {{
+          new Chartkick.PieChart("chart", chartData, {{
+            adapter: "highcharts",
+            colors: ["#000000", "#333333", "#666666", "#999999", "#CCCCCC"],
+            library: {{
+              chart: {{
+                animation: false
+              }},
+              plotOptions: {{
+                series: {{
+                  animation: false
+                }}
+              }}
+            }}
+          }});
+        }};
+
+        // Ensure chart loads properly
+        if ("Chartkick" in window) {{
+          createChart();
+        }} else {{
+          window.addEventListener("chartkick:load", createChart, true);
+        }}
+    """
+
+    return generate_base_html_template(title, chart_content)
+
+
+def generate_table_html(data_series, title="Grafana Panel"):
+    """Generate HTML for table panels"""
+    if isinstance(data_series, dict):
+        chart_data = list(data_series.values())[0]
+    else:
+        chart_data = data_series
+
+    chart_content = f"""
+        var chartData = {chart_data};
+
+        // Column chart for table representation
+        var createChart = function() {{
+          new Chartkick.ColumnChart("chart", chartData, {{
+            adapter: "highcharts",
+            colors: ["#000000"],
+            library: {{
+              chart: {{
+                animation: false
+              }},
+              plotOptions: {{
+                series: {{
+                  animation: false
+                }}
+              }},
+              yAxis: {{
+                labels: {{
+                  style: {{
+                    fontSize: "16px",
+                    color: "#000000"
+                  }}
+                }},
+                gridLineDashStyle: "shortdot",
+                gridLineWidth: 1,
+                gridLineColor: "#000000",
+                tickAmount: 5
+              }},
+              xAxis: {{
+                labels: {{
+                  style: {{
+                    fontSize: "16px",
+                    color: "#000000"
+                  }}
+                }},
+                lineWidth: 0,
+                gridLineDashStyle: "dot",
+                tickWidth: 1,
+                tickLength: 0,
+                gridLineWidth: 1,
+                gridLineColor: "#000000"
+              }}
+            }}
+          }});
+        }};
+
+        // Ensure chart loads properly
+        if ("Chartkick" in window) {{
+          createChart();
+        }} else {{
+          window.addEventListener("chartkick:load", createChart, true);
+        }}
+    """
+
+    return generate_base_html_template(title, chart_content)
+
+
+def generate_html(data_series, panel_type, title="Grafana Panel", full_html=False):
+    """Generate HTML with appropriate chart visualization based on panel type"""
+
+    # Check if this is a single stat value
+    is_stat = isinstance(data_series, dict) and "stat_value" in data_series
+
+    # Generate HTML based on panel type
+    if panel_type == "stat" and is_stat:
+        base_html = generate_stat_html(data_series, title)
+    elif panel_type == "gauge" and is_stat:
+        base_html = generate_gauge_html(data_series, title)
+    elif panel_type == "timeseries" or panel_type == "graph":
+        base_html = generate_timeseries_html(data_series, title)
+    elif panel_type == "bar gauge":
+        base_html = generate_bar_gauge_html(data_series, title)
+    elif panel_type == "piechart":
+        base_html = generate_piechart_html(data_series, title)
+    elif panel_type == "table":
+        base_html = generate_table_html(data_series, title)
+    else:
+        # Default to timeseries for unknown panel types
+        base_html = generate_timeseries_html(data_series, title)
 
     if full_html:
         return get_full_html(title, base_html)

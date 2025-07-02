@@ -1,0 +1,28 @@
+{
+    "panel_type": "gauge",
+    "panel_title": "CPU Usage",
+    "data_series": {
+        "stat_value": 75.5
+    },
+    "raw_response": {
+        "results": {
+            "A": {
+                "frames": [
+                    {
+                        "data": {
+                            "values": [[75.5]]
+                        }
+                    }
+                ]
+            }
+        }
+    },
+    "processed_targets": [
+        {
+            "refId": "A",
+            "expr": "cpu_usage_percent",
+            "format": "table"
+        }
+    ],
+    "variables": {}
+}

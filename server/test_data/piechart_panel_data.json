@@ -1,0 +1,36 @@
+{
+    "panel_type": "piechart",
+    "panel_title": "Traffic by Source",
+    "data_series": {
+        "Traffic Sources": [
+            ["Direct", 45],
+            ["Google", 30],
+            ["Social Media", 15],
+            ["Email", 10]
+        ]
+    },
+    "raw_response": {
+        "results": {
+            "A": {
+                "frames": [
+                    {
+                        "data": {
+                            "values": [
+                                ["Direct", "Google", "Social Media", "Email"],
+                                [45, 30, 15, 10]
+                            ]
+                        }
+                    }
+                ]
+            }
+        }
+    },
+    "processed_targets": [
+        {
+            "refId": "A",
+            "expr": "traffic_by_source",
+            "format": "table"
+        }
+    ],
+    "variables": {}
+}

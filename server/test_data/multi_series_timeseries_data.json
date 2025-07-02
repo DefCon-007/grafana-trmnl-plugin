@@ -1,0 +1,52 @@
+{
+    "panel_type": "timeseries",
+    "panel_title": "CPU vs Memory Usage",
+    "data_series": {
+        "CPU Usage": [
+            ["2023-12-01T10:00:00Z", 45.2],
+            ["2023-12-01T10:01:00Z", 46.1],
+            ["2023-12-01T10:02:00Z", 47.8],
+            ["2023-12-01T10:03:00Z", 45.9],
+            ["2023-12-01T10:04:00Z", 48.3]
+        ],
+        "Memory Usage": [
+            ["2023-12-01T10:00:00Z", 65.1],
+            ["2023-12-01T10:01:00Z", 66.8],
+            ["2023-12-01T10:02:00Z", 68.2],
+            ["2023-12-01T10:03:00Z", 67.5],
+            ["2023-12-01T10:04:00Z", 69.1]
+        ]
+    },
+    "raw_response": {
+        "results": {
+            "A": {
+                "frames": [
+                    {
+                        "data": {
+                            "values": [
+                                [1701421200000, 1701421260000, 1701421320000, 1701421380000, 1701421440000],
+                                [45.2, 46.1, 47.8, 45.9, 48.3],
+                                [65.1, 66.8, 68.2, 67.5, 69.1]
+                            ]
+                        },
+                        "schema": {
+                            "fields": [
+                                {"name": "time", "type": "time"},
+                                {"name": "CPU Usage", "type": "number"},
+                                {"name": "Memory Usage", "type": "number"}
+                            ]
+                        }
+                    }
+                ]
+            }
+        }
+    },
+    "processed_targets": [
+        {
+            "refId": "A",
+            "expr": "cpu_and_memory_usage",
+            "format": "time_series"
+        }
+    ],
+    "variables": {}
+}

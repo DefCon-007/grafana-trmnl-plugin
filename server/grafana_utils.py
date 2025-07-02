@@ -3,17 +3,6 @@ from urllib.parse import parse_qs, urlparse
 
 import requests
 
-# Chart type mapping for proper chart type detection
-CHART_TYPE_MAP = {
-    "timeseries": "LineChart",
-    "graph": "LineChart",
-    "stat": "ColumnChart",
-    "gauge": "ColumnChart",
-    "bar gauge": "BarChart",
-    "table": "ColumnChart",
-    "piechart": "PieChart",
-}
-
 
 def parse_panel_url(panel_url):
     """Parse Grafana panel URL to extract host, UID, panel ID, and variables"""
@@ -166,7 +155,7 @@ def get_series_name_from_labels(frame, ref_id):
     return ref_id
 
 
-def query_grafana_panel(host, token, processed_targets, fr, to, original_panel_type):
+def query_grafana_panel(host, token, processed_targets, fr, to, panel_type):
     """Query Grafana API and process the response into structured data"""
     query_url = f"{host}/api/ds/query"
 
@@ -185,8 +174,6 @@ def query_grafana_panel(host, token, processed_targets, fr, to, original_panel_t
 
     # Process the response data
     data_series = {}
-    # Use original panel type to determine correct chart type instead of defaulting to LineChart
-    chartkick_type = CHART_TYPE_MAP.get(original_panel_type, "LineChart")
 
     if "results" in response_data:
         # Process all series in the response
@@ -199,15 +186,7 @@ def query_grafana_panel(host, token, processed_targets, fr, to, original_panel_t
 
                         # Check if this is a single value stat (like COUNT(*))
                         if len(values) == 1 and len(values[0]) == 1:
-                            # Single stat value - preserve original type for gauge detection
-                            if original_panel_type == "gauge":
-                                chartkick_type = (
-                                    "gauge"  # Keep as gauge for special handling
-                                )
-                            else:
-                                chartkick_type = (
-                                    "stat"  # Mark as stat for special handling
-                                )
+                            # Single stat value
                             stat_value = values[0][0]
                             data_series["stat_value"] = stat_value
                         elif len(values) >= 2:
@@ -315,4 +294,4 @@ def query_grafana_panel(host, token, processed_targets, fr, to, original_panel_t
     if not data_series:
         data_series = {"No Data": []}
 
-    return response_data, data_series, chartkick_type
+    return response_data, data_series

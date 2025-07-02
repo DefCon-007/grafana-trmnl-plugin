@@ -1,0 +1,36 @@
+{
+    "panel_type": "table",
+    "panel_title": "Top Errors",
+    "data_series": {
+        "Error Counts": [
+            ["404 Not Found", 125],
+            ["500 Internal Error", 85],
+            ["403 Forbidden", 45],
+            ["401 Unauthorized", 22]
+        ]
+    },
+    "raw_response": {
+        "results": {
+            "A": {
+                "frames": [
+                    {
+                        "data": {
+                            "values": [
+                                ["404 Not Found", "500 Internal Error", "403 Forbidden", "401 Unauthorized"],
+                                [125, 85, 45, 22]
+                            ]
+                        }
+                    }
+                ]
+            }
+        }
+    },
+    "processed_targets": [
+        {
+            "refId": "A",
+            "expr": "error_counts_by_type",
+            "format": "table"
+        }
+    ],
+    "variables": {}
+}
