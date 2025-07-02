@@ -18,7 +18,7 @@ from grafana_utils import (
     parse_panel_url,
     query_grafana_panel,
 )
-from html_utils import generate_html
+from html_utils import generate_error_html, generate_html
 
 app = Flask(__name__)
 
@@ -29,64 +29,27 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def generate_error_html(error_message, title="Error"):
-    """Generate HTML for error messages"""
-    return f"""
-    <div style="padding: 20px; font-family: Arial, sans-serif;">
-        <h2 style="color: #d32f2f;">{title}</h2>
-        <p style="color: #666;">{error_message}</p>
-    </div>
-    """
-
-
-@app.errorhandler(GrafanaException)
-def handle_grafana_exception(error):
-    """Centralized error handler for custom Grafana exceptions"""
-    logger.error(f"Grafana exception: {error.message}")
-
-    # Check if this is a render request that should return HTML format
-    if request.endpoint == "render_chart" and request.method == "POST":
-        try:
-            data = request.get_json()
-            full_html = data.get("full_html", False) if data else False
-
-            if not full_html:
-                # Return error in the same format as success response
-                error_html = generate_error_html(error.message)
-                return jsonify(
-                    {"html": error_html, "generated_at": datetime.now().isoformat()}
-                ), error.status_code
-            else:
-                # Return full HTML response
-                error_html = f"""<!DOCTYPE html>
-<html>
-<head>
-    <title>Error</title>
-    <meta charset="utf-8">
-</head>
-<body>
-    {generate_error_html(error.message)}
-</body>
-</html>"""
-                response = make_response(error_html)
-                response.headers["Content-Type"] = "text/html; charset=utf-8"
-                return response, error.status_code
-        except Exception:
-            # If we can't determine the format, default to JSON
-            pass
-
-    # Default JSON error response
-    return jsonify({"error": error.message}), error.status_code
-
-
 @app.errorhandler(Exception)
-def handle_general_exception(error):
-    """Handler for unexpected exceptions"""
-    error_msg = str(error)
-    stack_trace = traceback.format_exc()
+def handle_exception(error):
+    """Unified error handler for all exceptions"""
+    # Check if this is a custom Grafana exception
+    is_grafana_exception = isinstance(error, GrafanaException)
 
-    logger.error(f"Unexpected exception: {error_msg}")
-    logger.error(f"Stack trace:\n{stack_trace}")
+    if is_grafana_exception:
+        error_msg = error.message
+        status_code = error.status_code
+        logger.error(f"Grafana exception: {error_msg}")
+    else:
+        error_msg = str(error)
+        status_code = 500
+        stack_trace = traceback.format_exc()
+        logger.error(f"Unexpected exception: {error_msg}")
+        logger.error(f"Stack trace:\n{stack_trace}")
+        # Prefix general exceptions with "Internal server error"
+        display_error_msg = f"Internal server error: {error_msg}"
+
+    # Use the original error message for Grafana exceptions, prefixed message for others
+    final_error_msg = error_msg if is_grafana_exception else display_error_msg
 
     # Check if this is a render request that should return HTML format
     if request.endpoint == "render_chart" and request.method == "POST":
@@ -94,33 +57,31 @@ def handle_general_exception(error):
             data = request.get_json()
             full_html = data.get("full_html", False) if data else False
 
-            if not full_html:
-                # Return error in the same format as success response
-                error_html = generate_error_html(f"Internal server error: {error_msg}")
-                return jsonify(
-                    {"html": error_html, "generated_at": datetime.now().isoformat()}
-                ), 500
-            else:
+            if full_html:
                 # Return full HTML response
-                error_html = f"""<!DOCTYPE html>
-<html>
-<head>
-    <title>Error</title>
-    <meta charset="utf-8">
-</head>
-<body>
-    {generate_error_html(f"Internal server error: {error_msg}")}
-</body>
-</html>"""
+                error_html = generate_error_html(final_error_msg, full_html=True)
                 response = make_response(error_html)
                 response.headers["Content-Type"] = "text/html; charset=utf-8"
-                return response, 500
+                return response, status_code
+            else:
+                # Return error in the same format as success response
+                error_html = generate_error_html(final_error_msg)
+                return jsonify(
+                    {"html": error_html, "generated_at": datetime.now().isoformat()}
+                ), status_code
+
         except Exception:
             # If we can't determine the format, default to JSON
             pass
 
     # Default JSON error response
-    return jsonify({"error": error_msg, "traceback": stack_trace}), 500
+    json_response = {"error": error_msg}
+
+    # Add stack trace for non-Grafana exceptions
+    if not is_grafana_exception:
+        json_response["traceback"] = stack_trace
+
+    return jsonify(json_response), status_code
 
 
 def _get_panel_data(data):
