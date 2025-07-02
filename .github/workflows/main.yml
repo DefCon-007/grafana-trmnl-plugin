@@ -34,4 +34,7 @@ jobs:
         project_id: ${{ vars.GCP_PROJECT }}
 
     - name: Test
-      run: curl "${{ steps.deploy.outputs.version_url }}"
+      run: |
+        echo "## Deployment Success! 🚀" >> $GITHUB_STEP_SUMMARY
+        echo "**Deployed URL:** ${{ steps.deploy.outputs.version_url }}" >> $GITHUB_STEP_SUMMARY
+        curl -f "${{ steps.deploy.outputs.version_url }}"
