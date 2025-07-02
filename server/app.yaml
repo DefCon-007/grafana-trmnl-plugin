@@ -1,0 +1,6 @@
+runtime: python311
+service: grafana-trmnl-plugin-server
+handlers:
+  - url: /.*
+    script: auto
+    secure: always

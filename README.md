@@ -2,6 +2,8 @@
 
 A Flask-based server that renders Grafana dashboard panels as HTML visualizations optimized for TRMNL displays.
 
+It can be accessed from https://grafana-trmnl.defcon007.com
+
 ## Architecture
 
 The application has been refactored into a modular structure:
