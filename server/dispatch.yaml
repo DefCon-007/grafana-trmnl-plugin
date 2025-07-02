@@ -1,0 +1,3 @@
+dispatch:
+  - url: grafana-trmnl.defcon007.com/*
+    service: grafana-trmnl-plugin-server
