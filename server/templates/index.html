@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Grafana TRMNL Plugin Server</title>
+    <meta charset="utf-8">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            max-width: 800px;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #007acc;
+            padding-bottom: 10px;
+        }
+
+        h2 {
+            color: #007acc;
+            margin-top: 30px;
+        }
+
+        .endpoint {
+            background: #f8f9fa;
+            padding: 15px;
+            border-left: 4px solid #007acc;
+            margin: 15px 0;
+        }
+
+        .method {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        code {
+            background: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+
+        pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+
+        .status {
+            color: #28a745;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🔗 Grafana TRMNL Plugin Server</h1>
+        <p><span class="status">✅ Server is running</span> - Ready to process Grafana panel requests</p>
+
+        <h2>📋 What This Server Does</h2>
+        <p>This server converts Grafana dashboard panels into HTML format suitable for display on TRMNL devices. It
+            fetches data from Grafana APIs and generates clean, readable HTML charts.</p>
+
+        <h2>🚀 Available Endpoints</h2>
+
+        <div class="endpoint">
+            <h3><span class="method">POST</span> /render</h3>
+            <p><strong>Purpose:</strong> Render a Grafana panel as HTML</p>
+            <p><strong>Required fields:</strong></p>
+            <ul>
+                <li><code>grafana_token</code> - Your Grafana API token</li>
+                <li><code>panel_url</code> - URL to the Grafana panel</li>
+            </ul>
+            <p><strong>Optional fields:</strong></p>
+            <ul>
+                <li><code>from</code> - Start time (default: "now-6h")</li>
+                <li><code>to</code> - End time (default: "now")</li>
+                <li><code>full_html</code> - Return complete HTML page (default: false)</li>
+            </ul>
+            <p><strong>Response:</strong> HTML content or JSON with HTML snippet</p>
+        </div>
+
+        <div class="endpoint">
+            <h3><span class="method">POST</span> /query</h3>
+            <p><strong>Purpose:</strong> Get raw query results from a Grafana panel without HTML rendering</p>
+            <p><strong>Required fields:</strong> Same as /render endpoint</p>
+            <p><strong>Response:</strong> JSON with raw panel data, series, and metadata</p>
+        </div>
+
+        <h2>💡 Example Usage</h2>
+        <pre><code>curl -X POST http://localhost:8080/render \
+  -H "Content-Type: application/json" \
+  -d '{
+    "grafana_token": "your-api-token",
+    "panel_url": "https://your-grafana.com/d/dashboard-uid?orgId=1&viewPanel=1",
+    "from": "now-1h",
+    "to": "now",
+    "full_html": false
+  }'</code></pre>
+
+        <h2>🔧 Features</h2>
+        <ul>
+            <li>✅ Supports multiple chart types (timeseries, bar, pie, etc.)</li>
+            <li>✅ Template variable support</li>
+            <li>✅ Automatic chart type detection</li>
+            <li>✅ Error handling with detailed messages</li>
+            <li>✅ Both JSON and full HTML response formats</li>
+            <li>✅ Configurable time ranges</li>
+        </ul>
+
+        <h2>🐳 Docker</h2>
+        <p>This server is designed to run in Docker containers and exposes port 8080.</p>
+
+        <footer
+            style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; color: #666; text-align: center;">
+            <p>Grafana TRMNL Plugin Server - Convert Grafana panels to TRMNL-ready HTML</p>
+        </footer>
+    </div>
+</body>
+
+</html>
