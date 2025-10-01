@@ -68,7 +68,7 @@ Returns raw query results and processed data as JSON.
 
 2. Start the server:
    ```bash
-   python app.py
+   python main.py
    ```
 
 3. Send POST requests to `http://localhost:5000/render` or `http://localhost:5000/query`
