@@ -4,6 +4,8 @@ A Flask-based server that renders Grafana dashboard panels as HTML visualization
 
 It can be accessed from https://grafana-trmnl.defcon007.com
 
+It is currently deployed using Google Cloud App Engine. 
+
 ## Architecture
 
 The application has been refactored into a modular structure:
@@ -82,6 +84,7 @@ Returns raw query results and processed data as JSON.
 - `query_grafana_panel()` - Execute queries and process responses
 - `process_series_data()` - Convert raw data to chart format
 - `get_series_name_from_labels()` - Extract meaningful series names
+
 
 ### html_utils.py
 - `generate_html()` - Create HTML with appropriate chart visualization
